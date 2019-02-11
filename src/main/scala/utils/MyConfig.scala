@@ -1,0 +1,26 @@
+package utils
+
+import java.nio.file.{Paths, Path => JPath}
+
+import com.typesafe.config.{Config, ConfigFactory}
+
+object MyConfig {
+  private[this] val config = ConfigFactory.load()
+
+  lazy val path = new Path(config.getConfig("path"))
+  lazy val property = new Property(config.getConfig("property"))
+}
+
+class Path(config: Config) {
+  lazy val modelName = config.getString("model_file")
+  lazy val dl4jPath: JPath = Paths.get(config.getString("dl4j_dir"))
+  lazy val imagesPath: JPath = dl4jPath.resolve(config.getString("images_dir"))
+  lazy val excludeFile: String = config.getString("exclude_file")
+  lazy val originalImagePath: JPath = Paths.get(config.getString("original_images_dir"))
+}
+
+class Property(config: Config) {
+  lazy val width = config.getInt("image.width")
+  lazy val height = config.getInt("image.height")
+  lazy val epoch = config.getInt("epoch")
+}
