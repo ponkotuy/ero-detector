@@ -9,3 +9,5 @@ libraryDependencies ++= Seq(
 )
 
 run / fork := true
+
+turbo := true
