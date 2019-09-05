@@ -9,5 +9,6 @@ libraryDependencies ++= Seq(
 )
 
 run / fork := true
+connectInput := true
 
 turbo := true
