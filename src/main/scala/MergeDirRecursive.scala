@@ -1,7 +1,7 @@
 import java.nio.file.Paths
 
 import utils.Files
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object MergeDirRecursive {
   def main(args: Array[String]): Unit = {

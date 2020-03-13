@@ -5,7 +5,7 @@ import java.nio.file.{Paths, Path => JPath}
 import com.google.cloud.vision.v1._
 import com.google.protobuf.ByteString
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class MyCloudVision {
   private[this] val client = ImageAnnotatorClient.create()
@@ -15,7 +15,7 @@ class MyCloudVision {
     val reqs = images.map{ image => AnnotateImageRequest.newBuilder().addFeatures(feature).setImage(image).build() }
     val batch = BatchAnnotateImagesRequest.newBuilder().addAllRequests(reqs.asJava).build()
     val raw = client.batchAnnotateImages(batch)
-    val res = raw.getResponsesList.asScala
+    val res = raw.getResponsesList.asScala.toSeq
     res.map(_.getSafeSearchAnnotation)
   }
 }

@@ -2,7 +2,7 @@ package utils
 
 import java.util.concurrent.LinkedBlockingQueue
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 case class ThreadSafeQueue[A](init: Seq[A]) {
   private[this] val queue = new LinkedBlockingQueue[A](init.asJava)

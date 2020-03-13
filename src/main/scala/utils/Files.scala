@@ -5,7 +5,7 @@ import java.nio.file.attribute.{BasicFileAttributes, FileAttribute}
 import java.nio.file.{CopyOption, LinkOption, OpenOption, Files => JFiles, Path => JPath}
 import java.util.function.{BiPredicate, Consumer}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object Files {
   import JFunction._

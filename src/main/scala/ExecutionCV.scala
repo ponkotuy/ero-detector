@@ -5,14 +5,14 @@ import java.util.Scanner
 import labels.Rate
 import utils.{Files, MyCloudVision, ThreadSafeQueue}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object ExecutionCV {
   val ThreadCount = 4
 
   def main(args: Array[String]): Unit = {
     val files = readFiles(System.in) ++ args
-    val groups = files.grouped(10).toVector
+    val groups = files.grouped(16).toVector
     val queue = ThreadSafeQueue(groups)
     val runner = new RunGroup(queue)
     (1 to ThreadCount).foreach { _ => new Thread(runner).start() }
@@ -36,6 +36,7 @@ class RunGroup(queue: ThreadSafeQueue[Seq[String]]) extends Runnable {
   override def run(): Unit = {
     Iterator.continually{
       queue.poll().fold(false){ xs =>
+        println(xs)
         val paths = xs.map(Paths.get(_)).filter(Files.isRegularFile(_)).filter(Files.isReadable)
         val images = paths.map(MyCloudVision.loadImagePath).map(_.get)
         val annotations = client.safeSearchDetections(images: _*).toList
