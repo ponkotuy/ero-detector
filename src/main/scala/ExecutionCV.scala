@@ -8,7 +8,7 @@ import utils.{Files, MyCloudVision, ThreadSafeQueue}
 import scala.jdk.CollectionConverters._
 
 object ExecutionCV {
-  val ThreadCount = 4
+  val ThreadCount = 2
 
   def main(args: Array[String]): Unit = {
     val files = readFiles(System.in) ++ args
@@ -36,7 +36,6 @@ class RunGroup(queue: ThreadSafeQueue[Seq[String]]) extends Runnable {
   override def run(): Unit = {
     Iterator.continually{
       queue.poll().fold(false){ xs =>
-        println(xs)
         val paths = xs.map(Paths.get(_)).filter(Files.isRegularFile(_)).filter(Files.isReadable)
         val images = paths.map(MyCloudVision.loadImagePath).map(_.get)
         val annotations = client.safeSearchDetections(images: _*).toList
