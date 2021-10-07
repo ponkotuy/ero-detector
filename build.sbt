@@ -1,15 +1,15 @@
 
 name := "ero-detector"
 
-scalaVersion := "2.13.1"
+scalaVersion := "3.0.2"
 
 libraryDependencies ++= Seq(
-  "com.typesafe" % "config" % "1.3.3",
-  "com.google.cloud" % "google-cloud-vision" % "1.99.2",
-  "com.google.api" % "gax-grpc" % "1.54.0"
+  "com.typesafe" % "config" % "1.4.1",
+  "com.google.cloud" % "google-cloud-vision" % "2.0.13",
+  "com.google.api" % "gax-grpc" % "2.5.0"
 )
 
-scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-Xlint")
+scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
 
 run / fork := true
 connectInput := true
