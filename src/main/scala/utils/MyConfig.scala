@@ -5,7 +5,7 @@ import java.nio.file.{Paths, Path => JPath}
 import com.typesafe.config.{Config, ConfigFactory}
 
 object MyConfig {
-  private[this] val config = ConfigFactory.load()
+  private val config = ConfigFactory.load()
 
   lazy val path = new Path(config.getConfig("path"))
   lazy val property = new Property(config.getConfig("property"))

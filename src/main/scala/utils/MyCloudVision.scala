@@ -8,7 +8,7 @@ import com.google.protobuf.ByteString
 import scala.jdk.CollectionConverters._
 
 class MyCloudVision {
-  private[this] val client = ImageAnnotatorClient.create()
+  private val client = ImageAnnotatorClient.create()
 
   def safeSearchDetections(images: Image*): Seq[SafeSearchAnnotation] = {
     val feature = Feature.newBuilder().setType(Feature.Type.SAFE_SEARCH_DETECTION)

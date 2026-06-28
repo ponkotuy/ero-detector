@@ -20,18 +20,18 @@ object Files {
     JFiles.walk(path, depth).iterator().asScala
 
   def probeContentType(path: JPath): String = JFiles.probeContentType(path)
-  def move(src: JPath, dest: JPath, options: CopyOption*): JPath = JFiles.move(src, dest, options:_*)
-  def mkdirs(src: JPath, attrs: FileAttribute[_]*): JPath = JFiles.createDirectories(src, attrs:_*)
-  def createSymbolicLink(link: JPath, src: JPath, attrs: FileAttribute[_]*): JPath =
-    JFiles.createSymbolicLink(link, src, attrs:_*)
+  def move(src: JPath, dest: JPath, options: CopyOption*): JPath = JFiles.move(src, dest, options*)
+  def mkdirs(src: JPath, attrs: FileAttribute[?]*): JPath = JFiles.createDirectories(src, attrs*)
+  def createSymbolicLink(link: JPath, src: JPath, attrs: FileAttribute[?]*): JPath =
+    JFiles.createSymbolicLink(link, src, attrs*)
   def delete(path: JPath): Unit = JFiles.delete(path)
-  def copy(is: InputStream, path: JPath, options: CopyOption*) = JFiles.copy(is, path, options:_*)
+  def copy(is: InputStream, path: JPath, options: CopyOption*) = JFiles.copy(is, path, options*)
 
-  def newInputStream(path: JPath, options: OpenOption*): InputStream = JFiles.newInputStream(path, options:_*)
+  def newInputStream(path: JPath, options: OpenOption*): InputStream = JFiles.newInputStream(path, options*)
   def readAllBytes(path: JPath): Array[Byte] = JFiles.readAllBytes(path)
 
-  def isDirectory(path: JPath, options: LinkOption*): Boolean = JFiles.isDirectory(path, options:_*)
-  def isRegularFile(path: JPath, options: LinkOption*): Boolean = JFiles.isRegularFile(path, options:_*)
+  def isDirectory(path: JPath, options: LinkOption*): Boolean = JFiles.isDirectory(path, options*)
+  def isRegularFile(path: JPath, options: LinkOption*): Boolean = JFiles.isRegularFile(path, options*)
   def isReadable(path: JPath): Boolean = JFiles.isReadable(path)
   def isWritable(path: JPath): Boolean = JFiles.isWritable(path)
 }

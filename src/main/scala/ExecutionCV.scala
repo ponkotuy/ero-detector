@@ -38,7 +38,7 @@ class RunGroup(queue: ThreadSafeQueue[Seq[String]]) extends Runnable {
       queue.poll().fold(false){ xs =>
         val paths = xs.map(Paths.get(_)).filter(Files.isRegularFile(_)).filter(Files.isReadable)
         val images = paths.map(MyCloudVision.loadImagePath).map(_.get)
-        val annotations = client.safeSearchDetections(images: _*).toList
+        val annotations = client.safeSearchDetections(images*).toList
         paths.zip(annotations).foreach{ case (path, anno) =>
           val fname = path.toString
           println(s"${fname}: Adult=${anno.getAdultValue} Racy=${anno.getRacyValue}")
