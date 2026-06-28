@@ -27,7 +27,7 @@ object Rate {
     if(racy == 5) {
       adult match {
         case 5 => Positive
-        case 4 | 3 => Neutral
+        case 4 | 3 | 2 => Neutral
         case _ => Negative
       }
     } else Negative

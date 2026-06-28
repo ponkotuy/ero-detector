@@ -50,7 +50,7 @@ sbt run
 処理結果は画像ファイルと同じディレクトリ配下に作られる分類ディレクトリへ移動されます。
 
 - `positive`: `racy` が `VERY_LIKELY` かつ `adult` が `VERY_LIKELY`
-- `neutral`: `racy` が `VERY_LIKELY` かつ `adult` が `POSSIBLE` または `LIKELY`
+- `neutral`: `racy` が `VERY_LIKELY` かつ `adult` が `UNLIKELY` / `POSSIBLE` / `LIKELY`
 - `negative`: 上記以外
 
 例:
