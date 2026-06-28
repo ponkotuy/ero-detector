@@ -7,11 +7,9 @@ Google Cloud Vision API の SafeSearch 検出を使って、画像を `negative`
 ## 前提
 
 - sbt
-- Java 8 / 11 / 17 あたりの LTS JDK
+- Java 17(mise)
 - Google Cloud Vision API を使える Google Cloud プロジェクト
 - Application Default Credentials で読めるサービスアカウントキー
-
-このリポジトリは `project/build.properties` で sbt `1.6.1` を使います。新しすぎる JDK では sbt/Scala 側が起動できないことがあります。手元の Java 26 では `bad constant pool index` で `sbt compile` が失敗しました。
 
 ## セットアップ
 
