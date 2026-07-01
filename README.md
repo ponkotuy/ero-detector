@@ -1,8 +1,8 @@
 # ero-detector
 
-Google Cloud Vision API の SafeSearch 検出を使って、画像を `negative` / `neutral` / `positive` のディレクトリに振り分ける Scala/sbt プロジェクトです。
+画像判定器を使って、画像を `negative` / `neutral` / `positive` のディレクトリに振り分ける Scala/sbt プロジェクトです。現在は Google Cloud Vision API の SafeSearch 検出を使う `cv` 判定器を実装しています。
 
-主に `sbt run` または `sbt "runMain ExecutionCV"` で使う想定です。実行すると対象画像ファイルはコピーではなく移動されます。
+主に `sbt run` または `sbt "runMain Classify"` で使う想定です。実行すると対象画像ファイルはコピーではなく移動されます。
 
 ## 前提
 
@@ -25,23 +25,35 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 cp src/main/resources/application.conf.sample src/main/resources/application.conf
 ```
 
-`ExecutionCV` だけを使う場合、`application.conf` は不要です。
+`Classify --classifier cv` だけを使う場合、`application.conf` は不要です。
 
-## SafeSearch で画像を分類する
+## 画像を分類する
 
-標準入力または引数で画像ファイルのパスを渡します。通常は `find` とパイプで渡すのが扱いやすいです。
-
-```sh
-find /path/to/images -maxdepth 1 -type f | sbt "runMain ExecutionCV"
-```
-
-引数で渡す場合は、プログラムが標準入力の EOF を待つため、リダイレクトで stdin を閉じます。
+標準入力または引数で画像ファイルのパスを渡します。標準入力は改行区切りと空白区切りの両方を受け付けます。通常は `find` とパイプで渡すのが扱いやすいです。判定器は `--classifier` で選択します。
 
 ```sh
-sbt "runMain ExecutionCV /path/to/a.jpg /path/to/b.jpg" < /dev/null
+find /path/to/images -maxdepth 1 -type f | sbt "runMain Classify --classifier cv"
 ```
 
-`sbt run` でも実行できます。複数の main クラスがあるため、sbt に候補を聞かれたら `ExecutionCV` を選んでください。
+引数で渡す場合は、標準入力を待たずに指定ファイルだけを処理します。
+
+```sh
+sbt "runMain Classify --classifier cv /path/to/a.jpg /path/to/b.jpg"
+```
+
+引数と標準入力を同時に使いたい場合は `--stdin` を指定します。
+
+```sh
+find /path/to/more-images -maxdepth 1 -type f | sbt "runMain Classify --classifier cv --stdin /path/to/a.jpg"
+```
+
+バッチサイズとスレッド数はオプションで変更できます。
+
+```sh
+sbt "runMain Classify --classifier cv --batch-size 16 --threads 2 /path/to/a.jpg"
+```
+
+`sbt run` でも実行できます。複数の main クラスがあるため、sbt に候補を聞かれたら `Classify` を選んでください。
 
 ```sh
 sbt run
@@ -105,5 +117,5 @@ Hu Moments の差分がほぼ同じ画像を重複とみなし、後続のファ
 
 - 画像ファイルは分類先へ移動されます。元の場所には残りません。
 - Google Cloud Vision API の利用料金が発生する場合があります。
-- `ExecutionCV` は 16 枚ずつ API に投げ、2 スレッドで処理します。
+- `Classify --classifier cv` はデフォルトで 16 枚ずつ API に投げ、2 スレッドで処理します。
 - `src/main/resources/application.conf` は `.gitignore` 対象です。

@@ -18,6 +18,8 @@ class MyCloudVision {
     val res = raw.getResponsesList.asScala.toSeq
     res.map(_.getSafeSearchAnnotation)
   }
+
+  def close(): Unit = client.close()
 }
 
 object MyCloudVision {
