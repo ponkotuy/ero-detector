@@ -31,7 +31,13 @@ cp src/main/resources/application.conf.sample src/main/resources/application.con
 
 `Classify --classifier cv` だけを使う場合、`application.conf` は不要です。
 
-`wd` 判定器を使う場合は、Hugging Face から `model.onnx` と `selected_tags.csv` を取得し、デフォルトでは次の場所に配置します。
+`wd` 判定器を使う場合は、次のsbtタスクで Hugging Face から `model.onnx` と `selected_tags.csv` を取得します。
+
+```sh
+sbt downloadWdModel
+```
+
+デフォルトでは次の場所に配置します。
 
 ```text
 models/wd-vit-tagger-v3/model.onnx

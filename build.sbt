@@ -16,3 +16,9 @@ run / fork := true
 connectInput := true
 
 turbo := true
+
+lazy val downloadWdModel = WdModelDownload.downloadWdModel
+
+downloadWdModel := {
+  WdModelDownload.run(baseDirectory.value, streams.value.log)
+}

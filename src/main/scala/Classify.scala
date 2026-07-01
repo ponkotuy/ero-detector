@@ -191,7 +191,7 @@ enum ClassifierBackend(val name: String) {
         val missing = Seq(config.wdModel, config.wdTags)
           .filterNot(path => Files.isRegularFile(path) && Files.isReadable(path))
         missing.headOption.map { path =>
-          s"WD classifier requires readable model files. Missing or unreadable: ${path}"
+          s"WD classifier requires readable model files. Missing or unreadable: ${path}. Run `sbt downloadWdModel` to download them."
         }
     }
 }
