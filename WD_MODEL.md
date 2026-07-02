@@ -18,11 +18,22 @@
 4. 画像は白背景で正方形パディングし、モデル入力サイズへBICUBICリサイズし、BGR順の `Float` 配列にします。実装は `src/main/scala/Classify.scala` の `prepareImage` 以降です。
    WebP画像は `org.sejda.imageio:webp-imageio` のImageIO pluginで読み込みます。ImageIOで読めない画像は `Skipped unreadable image: ...` をstderrへ出してスキップします。
 5. ONNX Runtimeでbatch推論します。入力shapeは `[batch, size, size, 3]` です。
-6. 出力スコアからrating 4種だけを取り出し、`maxBy` で最大スコアのratingを採用します。ここが重要で、スコアが何%以上ならpositive、という閾値はありません。
+6. 出力スコアからrating 4種だけを取り出し、`maxBy` で最大スコアのratingを採用します。ただしディレクトリ分類では、`explicit >= 0.1` と `general >= 0.1` の強制分類ルールを先に適用します。
 
 ## ディレクトリ分類の写像
 
-現在の写像は `src/main/scala/Classify.scala` の `WdRateMapping` です。
+現在の分類ルールは `src/main/scala/Classify.scala` の `WdRateMapping` です。
+
+まず、次の強制分類ルールを適用します。
+
+```text
+explicit >= 0.1 -> positive
+general  >= 0.1 -> negative
+```
+
+`explicit` と `general` の両方が `0.1` 以上の場合は、`explicit` を優先して `positive` にします。
+
+上記に当てはまらない場合は、最大スコアのratingを次のように写像します。
 
 ```text
 explicit     -> positive
@@ -50,7 +61,7 @@ explicit=0.26
 
 ```text
 general=0.80
-explicit=0.70
+explicit=0.05
 ```
 
 なら `general` が最大なので `negative` です。

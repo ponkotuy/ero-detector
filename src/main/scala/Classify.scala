@@ -257,13 +257,23 @@ case class WdRateMapping(
   sensitive: Rate,
   questionable: Rate
 ) {
-  def rateFor(rating: String): Rate =
-    rating match {
-      case "explicit" => Rate.Positive
-      case "questionable" => questionable
-      case "sensitive" => sensitive
-      case _ => Rate.Negative
+  private val generalNegativeThreshold = 0.1f
+  private val explicitPositiveThreshold = 0.1f
+
+  def rateFor(prediction: WdPrediction): Rate = {
+    if(prediction.scoreOf("explicit") >= explicitPositiveThreshold) {
+      Rate.Positive
+    } else if(prediction.scoreOf("general") >= generalNegativeThreshold) {
+      Rate.Negative
+    } else {
+      prediction.rating match {
+        case "explicit" => Rate.Positive
+        case "questionable" => questionable
+        case "sensitive" => sensitive
+        case _ => Rate.Negative
+      }
     }
+  }
 }
 
 object WdRateMapping {
@@ -272,7 +282,11 @@ object WdRateMapping {
 }
 
 case class WdRatingIndex(name: String, index: Int)
-case class WdPrediction(rating: String, score: Float, scores: Seq[(String, Float)])
+case class WdPrediction(rating: String, score: Float, scores: Seq[(String, Float)]) {
+  private lazy val scoresByName = scores.toMap
+
+  def scoreOf(rating: String): Float = scoresByName.getOrElse(rating, 0.0f)
+}
 
 class WdVitTaggerClassifier(
   modelPath: JPath,
@@ -317,7 +331,7 @@ class WdVitTaggerClassifier(
           val prediction = predictRating(scores)
           ClassifiedImage(
             path,
-            rateMapping.rateFor(prediction.rating),
+            rateMapping.rateFor(prediction),
             WdVitTaggerClassifier.formatDetails(prediction)
           )
         }

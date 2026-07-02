@@ -106,9 +106,14 @@ sbt run
 
 `wd` 判定器の分類基準:
 
-- `positive`: rating が `explicit`
-- `neutral`: rating が `sensitive` / `questionable`
-- `negative`: rating が `general`
+- `positive`: `explicit` のスコアが `0.1` 以上
+- `negative`: `general` のスコアが `0.1` 以上
+- 上記以外は最大スコアのratingで分類:
+  - `positive`: rating が `explicit`
+  - `neutral`: rating が `sensitive` / `questionable`
+  - `negative`: rating が `general`
+
+`explicit` と `general` の両方が `0.1` 以上の場合は `explicit` を優先して `positive` にします。
 
 `sensitive` と `questionable` の分類先はオプションで変更できます。
 
