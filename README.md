@@ -1,6 +1,6 @@
 # ero-detector
 
-画像判定器を使って、画像を `negative` / `neutral` / `positive` のディレクトリに振り分ける Scala/sbt プロジェクトです。Google Cloud Vision API の SafeSearch 検出を使う `cv` 判定器と、SmilingWolf/wd-vit-tagger-v3 を使う `wd` 判定器を実装しています。
+画像判定器を使って、画像を分類ディレクトリに振り分ける Scala/sbt プロジェクトです。Google Cloud Vision API の SafeSearch 検出を使う `cv` 判定器と、SmilingWolf/wd-vit-tagger-v3 を使う `wd` 判定器を実装しています。
 
 主に `sbt run` または `sbt "runMain Classify"` で使う想定です。実行すると対象画像ファイルはコピーではなく移動されます。
 
@@ -106,20 +106,12 @@ sbt run
 
 `wd` 判定器の分類基準:
 
-- `positive`: `explicit` のスコアが `0.1` 以上
-- `negative`: `general` のスコアが `0.1` 以上
-- 上記以外は最大スコアのratingで分類:
-  - `positive`: rating が `explicit`
-  - `neutral`: rating が `sensitive` / `questionable`
-  - `negative`: rating が `general`
+- `negative`: 最大ratingが `general`
+- `positive`: 最大ratingが `explicit`
+- `neutral-nega`: 最大ratingが `sensitive` / `questionable` で、`general` が `explicit` より高い
+- `neutral-posi`: 最大ratingが `sensitive` / `questionable` で、`explicit` が `general` 以上
 
-`explicit` と `general` の両方が `0.1` 以上の場合は `explicit` を優先して `positive` にします。
-
-`sensitive` と `questionable` の分類先はオプションで変更できます。
-
-```sh
-sbt "runMain Classify --classifier wd --wd-sensitive-rate neutral --wd-questionable-rate positive /path/to/a.jpg"
-```
+`wd` 判定器のログには `general` / `sensitive` / `questionable` / `explicit` の各スコアを表示します。
 
 例:
 
@@ -132,7 +124,7 @@ sbt "runMain Classify --classifier wd --wd-sensitive-rate neutral --wd-questiona
 
 ```text
 /path/to/images/negative/a.jpg
-/path/to/images/positive/b.jpg
+/path/to/images/neutral-posi/b.jpg
 ```
 
 ## その他の main クラス

@@ -10,10 +10,16 @@ sealed abstract class Rate extends ClassNameName {
 
 object Rate {
   case object Negative extends Rate
+  case object NeutralNega extends Rate {
+    override val name: String = "neutral-nega"
+  }
+  case object NeutralPosi extends Rate {
+    override val name: String = "neutral-posi"
+  }
   case object Neutral extends Rate
   case object Positive extends Rate
 
-  val values = Negative :: Neutral :: Positive :: Nil
+  val values = Negative :: NeutralNega :: Neutral :: NeutralPosi :: Positive :: Nil
 
   def fromScore(score: Double): Rate = {
     if(score < 0.1) Negative

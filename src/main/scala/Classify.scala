@@ -19,7 +19,7 @@ import scala.util.control.NonFatal
 
 object Classify extends CommandApp(
   name = "Classify",
-  header = "Classify images into negative / neutral / positive directories.",
+  header = "Classify images into rating directories.",
   main = ClassifyCli.opts.map(ClassifyRunner.run)
 )
 
@@ -27,9 +27,11 @@ given rateArgument: Argument[Rate] with {
   override def read(string: String): ValidatedNel[String, Rate] =
     string.toLowerCase match {
       case "negative" => Rate.Negative.validNel
+      case "neutral-nega" => Rate.NeutralNega.validNel
       case "neutral" => Rate.Neutral.validNel
+      case "neutral-posi" => Rate.NeutralPosi.validNel
       case "positive" => Rate.Positive.validNel
-      case _ => s"Unknown rate '$string'. Available: negative, neutral, positive".invalidNel
+      case _ => s"Unknown rate '$string'. Available: negative, neutral-nega, neutral, neutral-posi, positive".invalidNel
     }
 
   override def defaultMetavar: String = "rate"
@@ -103,22 +105,6 @@ object ClassifyCli {
         .map(Paths.get(_))
         .withDefault(Paths.get("models/wd-vit-tagger-v3/selected_tags.csv"))
 
-    val wdSensitiveRate =
-      Opts
-        .option[Rate](
-          "wd-sensitive-rate",
-          help = "Classification rate for WD rating 'sensitive'."
-        )
-        .withDefault(Rate.Neutral)
-
-    val wdQuestionableRate =
-      Opts
-        .option[Rate](
-          "wd-questionable-rate",
-          help = "Classification rate for WD rating 'questionable'."
-        )
-        .withDefault(Rate.Neutral)
-
     (
       classifier,
       batchSize,
@@ -127,9 +113,7 @@ object ClassifyCli {
       dryRun,
       files,
       wdModel,
-      wdTags,
-      wdSensitiveRate,
-      wdQuestionableRate
+      wdTags
     ).mapN(ClassifyConfig.apply)
   }
 }
@@ -142,9 +126,7 @@ case class ClassifyConfig(
   dryRun: Boolean,
   files: Seq[String],
   wdModel: JPath,
-  wdTags: JPath,
-  wdSensitiveRate: Rate,
-  wdQuestionableRate: Rate
+  wdTags: JPath
 )
 
 object ClassifyRunner {
@@ -191,7 +173,7 @@ enum ClassifierBackend(val name: String) {
   def create(config: ClassifyConfig): ImageClassifier =
     this match {
       case Cv => new CloudVisionClassifier
-      case Wd => new WdVitTaggerClassifier(config.wdModel, config.wdTags, WdRateMapping(config))
+      case Wd => new WdVitTaggerClassifier(config.wdModel, config.wdTags, WdRateMapping)
     }
 
   def validate(config: ClassifyConfig): Option[String] =
@@ -253,32 +235,20 @@ class CloudVisionClassifier extends ImageClassifier {
   override def close(): Unit = client.close()
 }
 
-case class WdRateMapping(
-  sensitive: Rate,
-  questionable: Rate
-) {
-  private val generalNegativeThreshold = 0.1f
-  private val explicitPositiveThreshold = 0.1f
-
+object WdRateMapping {
   def rateFor(prediction: WdPrediction): Rate = {
-    if(prediction.scoreOf("explicit") >= explicitPositiveThreshold) {
-      Rate.Positive
-    } else if(prediction.scoreOf("general") >= generalNegativeThreshold) {
-      Rate.Negative
-    } else {
-      prediction.rating match {
-        case "explicit" => Rate.Positive
-        case "questionable" => questionable
-        case "sensitive" => sensitive
-        case _ => Rate.Negative
-      }
+    prediction.rating match {
+      case "general" => Rate.Negative
+      case "explicit" => Rate.Positive
+      case "sensitive" | "questionable" =>
+        if(prediction.scoreOf("general") > prediction.scoreOf("explicit")) {
+          Rate.NeutralNega
+        } else {
+          Rate.NeutralPosi
+        }
+      case _ => Rate.Negative
     }
   }
-}
-
-object WdRateMapping {
-  def apply(config: ClassifyConfig): WdRateMapping =
-    WdRateMapping(config.wdSensitiveRate, config.wdQuestionableRate)
 }
 
 case class WdRatingIndex(name: String, index: Int)
@@ -291,7 +261,7 @@ case class WdPrediction(rating: String, score: Float, scores: Seq[(String, Float
 class WdVitTaggerClassifier(
   modelPath: JPath,
   tagsPath: JPath,
-  rateMapping: WdRateMapping
+  rateMapping: WdRateMapping.type
 ) extends ImageClassifier {
   ImageIO.scanForPlugins()
 
@@ -442,8 +412,8 @@ object WdVitTaggerClassifier {
   }
 
   def formatDetails(prediction: WdPrediction): String = {
-    val allScores = prediction.scores
-      .map { case (name, score) => f"${name}=${score}%.4f" }
+    val allScores = Seq("general", "sensitive", "questionable", "explicit")
+      .map { name => f"${name}=${prediction.scoreOf(name)}%.4f" }
       .mkString(" ")
     f"Rating=${prediction.rating} Score=${prediction.score}%.4f ${allScores}"
   }

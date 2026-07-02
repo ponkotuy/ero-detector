@@ -1,6 +1,6 @@
 # WD Model
 
-現状の `wd` classifier は、wd-vit-tagger-v3 の全タグ分類結果のうち rating 4種だけを見て、最大スコアのratingを `negative` / `neutral` / `positive` に写像する仕組みです。閾値判定は入っていません。
+現状の `wd` classifier は、wd-vit-tagger-v3 のrating 4種の最大スコアを見て分類します。最大ratingが `sensitive` / `questionable` の場合は、さらに `general` と `explicit` を比較して `neutral-nega` / `neutral-posi` に分けます。
 
 ## 処理の流れ
 
@@ -18,46 +18,43 @@
 4. 画像は白背景で正方形パディングし、モデル入力サイズへBICUBICリサイズし、BGR順の `Float` 配列にします。実装は `src/main/scala/Classify.scala` の `prepareImage` 以降です。
    WebP画像は `org.sejda.imageio:webp-imageio` のImageIO pluginで読み込みます。ImageIOで読めない画像は `Skipped unreadable image: ...` をstderrへ出してスキップします。
 5. ONNX Runtimeでbatch推論します。入力shapeは `[batch, size, size, 3]` です。
-6. 出力スコアからrating 4種だけを取り出し、`maxBy` で最大スコアのratingを採用します。ただしディレクトリ分類では、`explicit >= 0.1` と `general >= 0.1` の強制分類ルールを先に適用します。
+6. 出力スコアからrating 4種だけを取り出し、`maxBy` で最大スコアのratingを採用します。最大ratingが `sensitive` / `questionable` の場合は、`general` と `explicit` の値を比較して分類します。
 
 ## ディレクトリ分類の写像
 
 現在の分類ルールは `src/main/scala/Classify.scala` の `WdRateMapping` です。
 
-まず、次の強制分類ルールを適用します。
-
 ```text
-explicit >= 0.1 -> positive
-general  >= 0.1 -> negative
+general                         -> negative
+explicit                        -> positive
+sensitive/questionable
+  general > explicit            -> neutral-nega
+  explicit >= general           -> neutral-posi
 ```
 
-`explicit` と `general` の両方が `0.1` 以上の場合は、`explicit` を優先して `positive` にします。
-
-上記に当てはまらない場合は、最大スコアのratingを次のように写像します。
-
-```text
-explicit     -> positive
-questionable -> neutral
-sensitive    -> neutral
-general      -> negative
-```
-
-ただし `sensitive` と `questionable` はオプションで変更できます。
-
-```sh
-sbt "runMain Classify --classifier wd --wd-sensitive-rate neutral --wd-questionable-rate positive /path/to/a.jpg"
-```
+ログには `general` / `sensitive` / `questionable` / `explicit` の各スコアを表示します。
 
 つまり、現状では例えば:
 
 ```text
 general=0.20
 sensitive=0.10
-questionable=0.25
+questionable=0.95
 explicit=0.26
 ```
 
-なら、絶対値が低くても最大が `explicit` なので `positive` に移動します。逆に:
+なら、最大ratingが `questionable` で、`explicit` が `general` 以上なので `neutral-posi` に移動します。逆に:
+
+```text
+general=0.40
+sensitive=0.70
+questionable=0.30
+explicit=0.20
+```
+
+なら、最大ratingが `sensitive` で、`general` が `explicit` より高いので `neutral-nega` に移動します。
+
+最大ratingが `general` の場合:
 
 ```text
 general=0.80
@@ -65,6 +62,15 @@ explicit=0.05
 ```
 
 なら `general` が最大なので `negative` です。
+
+最大ratingが `explicit` の場合:
+
+```text
+general=0.20
+explicit=0.80
+```
+
+なら `explicit` が最大なので `positive` です。
 
 ## モデル取得
 
