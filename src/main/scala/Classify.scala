@@ -74,6 +74,14 @@ object ClassifyCli {
         )
         .orFalse
 
+    val dryRun =
+      Opts
+        .flag(
+          "dry-run",
+          help = "Print classification results without moving image files."
+        )
+        .orFalse
+
     val files =
       Opts.arguments[String](metavar = "file").orEmpty
 
@@ -101,7 +109,7 @@ object ClassifyCli {
           "wd-sensitive-rate",
           help = "Classification rate for WD rating 'sensitive'."
         )
-        .withDefault(Rate.Negative)
+        .withDefault(Rate.Neutral)
 
     val wdQuestionableRate =
       Opts
@@ -116,6 +124,7 @@ object ClassifyCli {
       batchSize,
       threadCount,
       readStdin,
+      dryRun,
       files,
       wdModel,
       wdTags,
@@ -130,6 +139,7 @@ case class ClassifyConfig(
   batchSize: Int,
   threadCount: Int,
   readStdin: Boolean,
+  dryRun: Boolean,
   files: Seq[String],
   wdModel: JPath,
   wdTags: JPath,
@@ -163,7 +173,7 @@ object ClassifyRunner {
     val failure = new AtomicReference[Throwable](null)
     val threads = (1 to config.threadCount).map { idx =>
       new Thread(
-        new ClassifyWorker(queue, () => config.classifier.create(config), failure),
+        new ClassifyWorker(queue, () => config.classifier.create(config), config.dryRun, failure),
         s"classify-${config.classifier.name}-$idx"
       )
     }
@@ -428,6 +438,7 @@ object WdVitTaggerClassifier {
 class ClassifyWorker(
   queue: ThreadSafeQueue[Seq[String]],
   createClassifier: () => ImageClassifier,
+  dryRun: Boolean,
   failure: AtomicReference[Throwable]
 ) extends Runnable {
   import ClassifyWorker._
@@ -441,8 +452,10 @@ class ClassifyWorker(
           queue.poll().fold(false) { xs =>
             val paths = xs.map(Paths.get(_)).filter(Files.isRegularFile(_)).filter(Files.isReadable)
             classifier.classify(paths).foreach { classified =>
-              println(s"${classified.path}: ${classified.details}")
-              splitDir(classified.path, classified.rate)
+              println(s"${classified.path}: Rate=${classified.rate.name} ${classified.details}")
+              if(!dryRun) {
+                splitDir(classified.path, classified.rate)
+              }
             }
             true
           }

@@ -27,7 +27,7 @@
 ```text
 explicit     -> positive
 questionable -> neutral
-sensitive    -> negative
+sensitive    -> neutral
 general      -> negative
 ```
 
@@ -61,4 +61,12 @@ explicit=0.70
 
 ```sh
 sbt downloadWdModel
+```
+
+## ログだけ確認する
+
+`--dry-run` を指定すると、分類結果をログに出すだけでファイルは移動しません。
+
+```sh
+sbt "runMain Classify --classifier wd --dry-run /path/to/a.jpg"
 ```

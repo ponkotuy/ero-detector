@@ -84,6 +84,12 @@ find /path/to/more-images -maxdepth 1 -type f | sbt "runMain Classify --classifi
 sbt "runMain Classify --classifier cv --batch-size 16 --threads 2 /path/to/a.jpg"
 ```
 
+分類結果のログだけを確認し、ファイルを移動しない場合は `--dry-run` を指定します。
+
+```sh
+sbt "runMain Classify --classifier wd --dry-run /path/to/a.jpg"
+```
+
 `sbt run` でも実行できます。複数の main クラスがあるため、sbt に候補を聞かれたら `Classify` を選んでください。
 
 ```sh
@@ -101,8 +107,8 @@ sbt run
 `wd` 判定器の分類基準:
 
 - `positive`: rating が `explicit`
-- `neutral`: rating が `questionable`
-- `negative`: rating が `general` / `sensitive`
+- `neutral`: rating が `sensitive` / `questionable`
+- `negative`: rating が `general`
 
 `sensitive` と `questionable` の分類先はオプションで変更できます。
 
