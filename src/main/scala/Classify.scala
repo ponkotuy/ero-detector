@@ -269,6 +269,8 @@ class WdVitTaggerClassifier(
   tagsPath: JPath,
   rateMapping: WdRateMapping
 ) extends ImageClassifier {
+  ImageIO.scanForPlugins()
+
   private val env = OrtEnvironment.getEnvironment
   private val session = env.createSession(modelPath.toString, new OrtSession.SessionOptions)
   private val inputName = session.getInputNames.iterator.next()
@@ -282,7 +284,12 @@ class WdVitTaggerClassifier(
     }
 
     val images = paths.flatMap { path =>
-      WdVitTaggerClassifier.prepareImage(path, targetSize).map(path -> _)
+      WdVitTaggerClassifier.prepareImage(path, targetSize) match {
+        case Some(image) => Some(path -> image)
+        case None =>
+          System.err.println(s"Skipped unreadable image: ${path}")
+          None
+      }
     }
     if(images.isEmpty) {
       return Seq.empty

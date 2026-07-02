@@ -163,5 +163,5 @@ Hu Moments の差分がほぼ同じ画像を重複とみなし、後続のファ
 - 画像ファイルは分類先へ移動されます。元の場所には残りません。
 - Google Cloud Vision API の利用料金が発生する場合があります。
 - `Classify --classifier cv` はデフォルトで 16 枚ずつ API に投げ、2 スレッドで処理します。
-- `Classify --classifier wd` はローカルの ONNX Runtime で推論します。モデルファイルは大きいため、このリポジトリには含めません。
+- `Classify --classifier wd` はローカルの ONNX Runtime で推論します。WebP画像は `webp-imageio` のImageIO pluginで読み込みます。モデルファイルは大きいため、このリポジトリには含めません。
 - `src/main/resources/application.conf` は `.gitignore` 対象です。
