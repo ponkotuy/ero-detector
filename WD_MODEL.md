@@ -17,8 +17,30 @@
 3. `selected_tags.csv` から `category == 9` の行だけをratingとして読みます。ここが `general`, `sensitive`, `questionable`, `explicit` に対応します。実装は `src/main/scala/Classify.scala` の `loadRatingIndexes` です。
 4. 画像は白背景で正方形パディングし、モデル入力サイズへBICUBICリサイズし、BGR順の `Float` 配列にします。実装は `src/main/scala/Classify.scala` の `prepareImage` 以降です。
    WebP画像は `org.sejda.imageio:webp-imageio` のImageIO pluginで読み込みます。ImageIOで読めない画像は `Skipped unreadable image: ...` をstderrへ出してスキップします。
-5. ONNX Runtimeでbatch推論します。入力shapeは `[batch, size, size, 3]` です。
+5. ONNX Runtimeでbatch推論します。入力shapeは `[batch, size, size, 3]` です。デフォルトはCPU推論です。
 6. 出力スコアからrating 4種だけを取り出し、`maxBy` で最大スコアのratingを採用します。最大ratingが `sensitive` / `questionable` の場合は、`general` と `explicit` の値を比較して分類します。
+
+## 実行デバイス
+
+`wd` classifier はデフォルトではCPUを使います。CUDA GPUを使う場合は、sbtへ `-Donnxruntime.gpu=true` を渡して ONNX Runtime のGPU artifactを使い、Classifyには `--wd-device cuda` を指定します。
+
+```sh
+sbt -Donnxruntime.gpu=true "runMain Classify --classifier wd --wd-device cuda --dry-run /path/to/a.jpg"
+```
+
+GPU番号を指定する場合:
+
+```sh
+sbt -Donnxruntime.gpu=true "runMain Classify --classifier wd --wd-device cuda --wd-cuda-device-id 0 --dry-run /path/to/a.jpg"
+```
+
+`--wd-device cuda` を指定しない限りCUDA providerは追加されません。通常のCPU実行は従来通りです。
+
+```sh
+sbt "runMain Classify --classifier wd --dry-run /path/to/a.jpg"
+```
+
+`-Donnxruntime.gpu=true` を付けずに `--wd-device cuda` を指定すると、CPU版のONNX RuntimeではCUDA providerが利用できないためエラーになります。
 
 ## ディレクトリ分類の写像
 

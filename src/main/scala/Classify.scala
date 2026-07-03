@@ -6,7 +6,7 @@ import java.nio.file.{Path => JPath, Paths}
 import java.util
 import java.util.concurrent.atomic.AtomicReference
 
-import ai.onnxruntime.{OnnxTensor, OrtEnvironment, OrtSession, TensorInfo}
+import ai.onnxruntime.{OnnxTensor, OrtEnvironment, OrtException, OrtProvider, OrtSession, TensorInfo}
 import cats.data.ValidatedNel
 import cats.syntax.all._
 import com.monovore.decline.{Argument, CommandApp, Opts}
@@ -105,6 +105,23 @@ object ClassifyCli {
         .map(Paths.get(_))
         .withDefault(Paths.get("models/wd-vit-tagger-v3/selected_tags.csv"))
 
+    val wdDevice =
+      Opts
+        .option[WdExecutionDevice](
+          "wd-device",
+          help = "Execution device for the WD classifier: cpu or cuda."
+        )
+        .withDefault(WdExecutionDevice.Cpu)
+
+    val wdCudaDeviceId =
+      Opts
+        .option[Int](
+          "wd-cuda-device-id",
+          help = "CUDA GPU device id for --wd-device cuda."
+        )
+        .withDefault(0)
+        .validate("wd-cuda-device-id must be greater than or equal to 0")(_ >= 0)
+
     (
       classifier,
       batchSize,
@@ -113,7 +130,9 @@ object ClassifyCli {
       dryRun,
       files,
       wdModel,
-      wdTags
+      wdTags,
+      wdDevice,
+      wdCudaDeviceId
     ).mapN(ClassifyConfig.apply)
   }
 }
@@ -126,7 +145,9 @@ case class ClassifyConfig(
   dryRun: Boolean,
   files: Seq[String],
   wdModel: JPath,
-  wdTags: JPath
+  wdTags: JPath,
+  wdDevice: WdExecutionDevice,
+  wdCudaDeviceId: Int
 )
 
 object ClassifyRunner {
@@ -173,7 +194,14 @@ enum ClassifierBackend(val name: String) {
   def create(config: ClassifyConfig): ImageClassifier =
     this match {
       case Cv => new CloudVisionClassifier
-      case Wd => new WdVitTaggerClassifier(config.wdModel, config.wdTags, WdRateMapping)
+      case Wd =>
+        new WdVitTaggerClassifier(
+          config.wdModel,
+          config.wdTags,
+          config.wdDevice,
+          config.wdCudaDeviceId,
+          WdRateMapping
+        )
     }
 
   def validate(config: ClassifyConfig): Option[String] =
@@ -182,9 +210,10 @@ enum ClassifierBackend(val name: String) {
       case Wd =>
         val missing = Seq(config.wdModel, config.wdTags)
           .filterNot(path => Files.isRegularFile(path) && Files.isReadable(path))
-        missing.headOption.map { path =>
+        val missingError = missing.headOption.map { path =>
           s"WD classifier requires readable model files. Missing or unreadable: ${path}. Run `sbt downloadWdModel` to download them."
         }
+        missingError.orElse(config.wdDevice.validateAvailable)
     }
 }
 
@@ -199,6 +228,47 @@ object ClassifierBackend {
         .toValidNel(s"Unknown classifier '$string'. Available: ${valuesByName.keys.toSeq.sorted.mkString(", ")}")
 
     override def defaultMetavar: String = "classifier"
+  }
+}
+
+enum WdExecutionDevice(val name: String) {
+  case Cpu extends WdExecutionDevice("cpu")
+  case Cuda extends WdExecutionDevice("cuda")
+
+  def validateAvailable: Option[String] =
+    this match {
+      case Cpu => None
+      case Cuda =>
+        try {
+          val providers = OrtEnvironment.getAvailableProviders()
+          if(providers.contains(OrtProvider.CUDA)) {
+            None
+          } else {
+            Some(
+              "WD CUDA requested but ONNX Runtime CUDA provider is not available. " +
+                s"Available providers: ${providers.toArray.mkString(", ")}. " +
+                "Run with `sbt -Donnxruntime.gpu=true \"runMain Classify --classifier wd --wd-device cuda ...\"` " +
+                "and ensure NVIDIA driver/CUDA/cuDNN match the ONNX Runtime GPU package."
+            )
+          }
+        } catch {
+          case error: UnsatisfiedLinkError =>
+            Some(s"WD CUDA requested but ONNX Runtime native libraries could not be loaded: ${error.getMessage}")
+        }
+    }
+}
+
+object WdExecutionDevice {
+  val valuesByName: Map[String, WdExecutionDevice] =
+    values.map(value => value.name -> value).toMap
+
+  given Argument[WdExecutionDevice] with {
+    override def read(string: String): ValidatedNel[String, WdExecutionDevice] =
+      valuesByName
+        .get(string.toLowerCase)
+        .toValidNel(s"Unknown WD execution device '$string'. Available: ${valuesByName.keys.toSeq.sorted.mkString(", ")}")
+
+    override def defaultMetavar: String = "wd-device"
   }
 }
 
@@ -261,12 +331,14 @@ case class WdPrediction(rating: String, score: Float, scores: Seq[(String, Float
 class WdVitTaggerClassifier(
   modelPath: JPath,
   tagsPath: JPath,
+  device: WdExecutionDevice,
+  cudaDeviceId: Int,
   rateMapping: WdRateMapping.type
 ) extends ImageClassifier {
   ImageIO.scanForPlugins()
 
   private val env = OrtEnvironment.getEnvironment
-  private val session = env.createSession(modelPath.toString, new OrtSession.SessionOptions)
+  private val session = WdVitTaggerClassifier.createSession(env, modelPath, device, cudaDeviceId)
   private val inputName = session.getInputNames.iterator.next()
   private val outputName = session.getOutputNames.iterator.next()
   private val targetSize = readTargetSize()
@@ -332,6 +404,31 @@ class WdVitTaggerClassifier(
 }
 
 object WdVitTaggerClassifier {
+  def createSession(
+    env: OrtEnvironment,
+    modelPath: JPath,
+    device: WdExecutionDevice,
+    cudaDeviceId: Int
+  ): OrtSession = {
+    val options = new OrtSession.SessionOptions
+    try {
+      device match {
+        case WdExecutionDevice.Cpu => ()
+        case WdExecutionDevice.Cuda => options.addCUDA(cudaDeviceId)
+      }
+      env.createSession(modelPath.toString, options)
+    } catch {
+      case error: OrtException if device == WdExecutionDevice.Cuda =>
+        throw new IllegalStateException(
+          "Failed to create WD ONNX Runtime CUDA session. " +
+            "Run with `sbt -Donnxruntime.gpu=true` and verify NVIDIA driver/CUDA/cuDNN compatibility.",
+          error
+        )
+    } finally {
+      options.close()
+    }
+  }
+
   def loadRatingIndexes(tagsPath: JPath): Seq[WdRatingIndex] = {
     val source = Source.fromFile(tagsPath.toFile)
     val lines =

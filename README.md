@@ -14,6 +14,9 @@
 - `wd` 判定器を使う場合:
   - SmilingWolf/wd-vit-tagger-v3 の `model.onnx`
   - SmilingWolf/wd-vit-tagger-v3 の `selected_tags.csv`
+- `wd` 判定器をGPUで動かす場合:
+  - NVIDIA GPU/driver
+  - ONNX Runtime GPU package と互換のある CUDA/cuDNN runtime
 
 ## セットアップ
 
@@ -59,6 +62,20 @@ WD判定器に切り替える場合は `--classifier wd` を指定します。
 ```sh
 find /path/to/images -maxdepth 1 -type f | sbt "runMain Classify --classifier wd"
 ```
+
+WD判定器はデフォルトでCPU推論します。CUDA GPUを使う場合は、ONNX Runtime のGPU artifactを使うために sbt へ `-Donnxruntime.gpu=true` を渡し、Classifyには `--wd-device cuda` を指定します。
+
+```sh
+find /path/to/images -maxdepth 1 -type f | sbt -Donnxruntime.gpu=true "runMain Classify --classifier wd --wd-device cuda"
+```
+
+GPU番号を指定する場合は `--wd-cuda-device-id` を使います。
+
+```sh
+find /path/to/images -maxdepth 1 -type f | sbt -Donnxruntime.gpu=true "runMain Classify --classifier wd --wd-device cuda --wd-cuda-device-id 0"
+```
+
+`-Donnxruntime.gpu=true` を付けずに `--wd-device cuda` を指定した場合は、CUDA providerが利用できないためエラーになります。
 
 モデルファイルの場所を指定する例:
 
@@ -166,5 +183,5 @@ Hu Moments の差分がほぼ同じ画像を重複とみなし、後続のファ
 - 画像ファイルは分類先へ移動されます。元の場所には残りません。
 - Google Cloud Vision API の利用料金が発生する場合があります。
 - `Classify --classifier cv` はデフォルトで 16 枚ずつ API に投げ、2 スレッドで処理します。
-- `Classify --classifier wd` はローカルの ONNX Runtime で推論します。WebP画像は `webp-imageio` のImageIO pluginで読み込みます。モデルファイルは大きいため、このリポジトリには含めません。
+- `Classify --classifier wd` はローカルの ONNX Runtime で推論します。デフォルトはCPUです。CUDA GPUを使う場合だけ `sbt -Donnxruntime.gpu=true` と `--wd-device cuda` を指定します。WebP画像は `webp-imageio` のImageIO pluginで読み込みます。モデルファイルは大きいため、このリポジトリには含めません。
 - `src/main/resources/application.conf` は `.gitignore` 対象です。
