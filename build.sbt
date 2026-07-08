@@ -9,8 +9,7 @@ val useOnnxRuntimeGpu =
 val onnxRuntimeArtifact =
   if(useOnnxRuntimeGpu) "onnxruntime_gpu" else "onnxruntime"
 
-val onnxRuntimeVersion =
-  if(useOnnxRuntimeGpu) "1.18.0" else "1.17.0"
+val onnxRuntimeVersion = "1.20.0"
 
 libraryDependencies ++= Seq(
   "com.typesafe" % "config" % "1.4.9",
