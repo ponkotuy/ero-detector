@@ -176,9 +176,37 @@ sbt "runMain MergeDirRecursive /path/to/base-dir"
 
 例: `/path/to/base-dir/a/b.jpg` は `/path/to/base-dir/a_b.jpg` へ移動されます。
 
+### DedupeImages
+
+指定した画像の重複を検出して削除します。BGR各チャンネルの Hu Moments を求め、差分が `1.0e-9` 未満の画像を重複とみなします。
+
+```sh
+sbt "runMain DedupeImages /path/to/images/a.jpg /path/to/images/b.jpg"
+```
+
+`Classify` と同じく、引数を渡さない場合は標準入力からファイルのパスを読みます。引数と標準入力を同時に使う場合は `--stdin` を指定します。
+
+```sh
+find /path/to/images -maxdepth 1 -type f | sbt "runMain DedupeImages"
+```
+
+削除せずに検出結果だけを見る場合は `--dry-run` を指定します。スレッド数は `--threads` で変更でき、デフォルトはCPUのコア数です。
+
+```sh
+sbt "runMain DedupeImages --dry-run --threads 4 /path/to/images/*.jpg"
+```
+
+検出した重複は「ソート順で先に来たファイル名、削除するファイル名、差分」の順に表示します。
+
+```text
+a.jpg a_copy.jpg 0.0
+```
+
+閾値が `1.0e-9` と非常に小さいため、実質的にデコード後の画素が完全に一致する画像だけを重複とみなします。同じ画像でも解像度や再エンコードが違えば重複になりません。読み込めないファイルは存在しないものとして無視します。
+
 ## Python 補助スクリプト
 
-`image-processing/` には OpenCV を使った重複画像削除用の古い補助スクリプトがあります。
+`image-processing/` には移植元となった OpenCV 版の重複画像削除スクリプトがあります。処理内容は `DedupeImages` と同じで、通常はそちらを使ってください。
 
 ```sh
 cd image-processing
@@ -186,11 +214,10 @@ pipenv install
 pipenv run python main.py /path/to/images/*.jpg
 ```
 
-Hu Moments の差分がほぼ同じ画像を重複とみなし、後続のファイルを削除します。こちらも破壊的な処理なので、必要なら事前にバックアップを取ってください。
-
 ## 注意
 
 - 画像ファイルは分類先へ移動されます。元の場所には残りません。
+- `DedupeImages` は重複と判定したファイルを削除します。事前に `--dry-run` で確認するか、バックアップを取ってください。
 - Google Cloud Vision API の利用料金が発生する場合があります。
 - `Classify --classifier cv` はデフォルトで 16 枚ずつ API に投げ、2 スレッドで処理します。
 - `Classify --classifier wd` はローカルの ONNX Runtime で推論します。デフォルトはCPUです。CUDA GPUを使う場合だけ `sbt -Donnxruntime.gpu=true` と `--wd-device cuda` を指定します。GPU実行時は `onnxruntime_gpu:1.20.0` に合わせて CUDA 12.x runtime と cuDNN 9.x runtime が必要です。WebP画像は `webp-imageio` のImageIO pluginで読み込みます。モデルファイルは大きいため、このリポジトリには含めません。
