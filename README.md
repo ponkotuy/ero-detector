@@ -204,16 +204,6 @@ a.jpg a_copy.jpg 0.0
 
 閾値が `1.0e-9` と非常に小さいため、実質的にデコード後の画素が完全に一致する画像だけを重複とみなします。同じ画像でも解像度や再エンコードが違えば重複になりません。読み込めないファイルは存在しないものとして無視します。
 
-## Python 補助スクリプト
-
-`image-processing/` には移植元となった OpenCV 版の重複画像削除スクリプトがあります。処理内容は `DedupeImages` と同じで、通常はそちらを使ってください。
-
-```sh
-cd image-processing
-pipenv install
-pipenv run python main.py /path/to/images/*.jpg
-```
-
 ## 注意
 
 - 画像ファイルは分類先へ移動されます。元の場所には残りません。
