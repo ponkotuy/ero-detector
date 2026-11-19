@@ -1,7 +1,7 @@
 
 name := "ero-detector"
 
-scalaVersion := "3.8.4"
+scalaVersion := "3.10.1"
 
 val useOnnxRuntimeGpu =
   sys.props.get("onnxruntime.gpu").exists(value => Set("1", "true", "yes").contains(value.toLowerCase))
@@ -12,11 +12,11 @@ val onnxRuntimeArtifact =
 val onnxRuntimeVersion = "1.20.0"
 
 libraryDependencies ++= Seq(
-  "com.typesafe" % "config" % "1.4.9",
-  "com.monovore" %% "decline" % "2.6.1",
+  "com.typesafe" % "config" % "1.4.10",
+  "com.monovore" %% "decline" % "2.6.2",
   "com.microsoft.onnxruntime" % onnxRuntimeArtifact % onnxRuntimeVersion,
   "org.sejda.imageio" % "webp-imageio" % "0.1.6",
-  "com.google.cloud" % "google-cloud-vision" % "3.91.0"
+  "com.google.cloud" % "google-cloud-vision" % "3.101.0"
 )
 
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
