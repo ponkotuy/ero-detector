@@ -22,6 +22,12 @@ libraryDependencies ++= Seq(
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
 
 run / fork := true
+run / javaOptions ++= Seq(
+  // ONNX Runtime が System.load で JNI ライブラリを読むため
+  "--enable-native-access=ALL-UNNAMED",
+  // scala.runtime.LazyVals が sun.misc.Unsafe を使うため (JDK 24+ の警告抑止)
+  "--sun-misc-unsafe-memory-access=allow"
+)
 connectInput := true
 
 turbo := true
